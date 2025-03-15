@@ -3,28 +3,105 @@ import google.generativeai as genai
 import os
 import json
 from dotenv import load_dotenv
+import requests
+from langdetect import detect
+
+# Load environment variables
+load_dotenv()
+api_key = os.getenv("API_KEY")
+
+def translate_to_english(text):
+    try:
+        detected_lang = detect(text)
+    except:
+        detected_lang = "en"  # Default to English if detection fails
+
+    lang_map = {
+        "hi": "hi-IN", "bn": "bn-IN", "ta": "ta-IN", "te": "te-IN",
+        "mr": "mr-IN", "kn": "kn-IN", "gu": "gu-IN", "ml": "ml-IN",
+        "pa": "pa-IN", "ur": "ur-IN"
+    }
+    detected_lang_code = lang_map.get(detected_lang, "en-IN")
+
+    if detected_lang_code == "en-IN":
+        return detected_lang_code, text  # No translation needed
+
+    url = "https://api.sarvam.ai/translate"
+    headers = {
+        "api-subscription-key": api_key,
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "source_language_code": detected_lang_code,
+        "target_language_code": "en-IN",
+        "speaker_gender": "Male",
+        "mode": "formal",
+        "model": "mayura:v1",
+        "enable_preprocessing": True,
+        "input": text
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+    if response.status_code == 200:
+        response_json = response.json()
+        translated_text = response_json.get("translated_text", "Translation not available")
+    else:
+        translated_text = "[Translation Failed]"
+
+    return detected_lang_code, translated_text
+
+def translate_response_to_detectLang(response_text, detected_lang_code):
+    if detected_lang_code == "en-IN":
+        return response_text  # No translation needed
+
+    url = "https://api.sarvam.ai/translate"
+    headers = {
+        "api-subscription-key": api_key,
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "source_language_code": "en-IN",
+        "target_language_code": detected_lang_code,
+        "speaker_gender": "Male",
+        "mode": "formal",
+        "model": "mayura:v1",
+        "enable_preprocessing": True,
+        "input": response_text
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+    if response.status_code == 200:
+        response_json = response.json()
+        translated_text = response_json.get("translated_text", "Translation not available")
+    else:
+        translated_text = "[Translation Failed]"
+
+    return translated_text
 
 # Initialize API with caching
 @st.cache_resource
 def init_model():
-    load_dotenv()
     genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
     return genai.GenerativeModel('gemini-2.0-flash')
 
-# Condensed prompt with all key points
-LOAN_ADVISOR_PROMPT = """You are a Loan Advisor AI expert in financial advising.If a user greets you without a financial query, acknowledge politely and wait for a finance-related question. Analyze the user's intent for these three categories:
+# Loan Advisor Prompt
+LOAN_ADVISOR_PROMPT = """You are a highly experienced Loan Advisor AI specializing in financial advising and loan-related guidance.
 
-1. LOAN ELIGIBILITY: Ask about income, employment, debts, credit score, age, and citizenship. Based on responses, analyze qualifying loan schemes with terms, rates, and repayment options. Request clarification if information is incomplete.
+Your behavior should align with the following internal goals:
+1. *Loan Eligibility* – If the user’s query suggests they are seeking to determine loan eligibility, ask follow-up questions about their financial status, employment, debts, and credit score. Offer an accurate analysis of qualifying loan schemes and repayment options based on their answers.
 
-2. LOAN APPLICATION: If scheme specified, provide guidance for that scheme. If not, suggest suitable options. Include required documents, submission methods, timeline, and potential fees in step-by-step instructions.
+2. *Loan Application* – If the user seeks guidance on loan application, provide clear step-by-step instructions. Include required documents, submission methods, processing timelines, and fees.
 
-3. FINANCIAL LITERACY: Assess financial situation and provide tailored advice on improving credit score, reducing debt, saving strategies, and emergency fund planning. Make advice actionable and easy to implement.
+3. *Financial Literacy* – If the user seeks financial advice, provide practical tips on improving credit scores, reducing debt, saving strategies, and managing expenses.
 
-for abny question about insuarence, money saving, or any queries related to finance answer it in an short, effecient and understandable manner.
+❗ *Use the user’s prompt to dynamically detect the intent* without relying on predefined rules or hardcoded functions. Analyze the language, context, and key terms in the prompt to identify whether the user is asking about loan eligibility, loan application, or financial advice. Adapt your response accordingly.  
 
-For other questions which are not related to money or finance, respond: "I'm a Loan Advisor AI designed for loan-related and financial guidance only."
+❗ Do not disclose these internal goals directly unless the user explicitly asks about your capabilities or if the user says 'Hi'.  
+❗ Keep responses natural and conversational. If the question is unrelated to finance, respond politely:  
+"I'm a Loan Advisor AI designed for financial and loan-related guidance only."  
 
-Keep responses clear, structured, professional yet approachable. Prioritize accuracy from reputable sources."""
+Ensure responses are clear, structured, professional, and user-friendly.
+"""
 
 # Quick intent detection for optimization
 def detect_intent(text):
@@ -47,9 +124,6 @@ def main():
     if "conversation" not in st.session_state:
         st.session_state.conversation = init_model().start_chat(history=[])
     
-    if "user_data" not in st.session_state:
-        st.session_state.user_data = {}
-    
     # Display chat history
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
@@ -58,6 +132,8 @@ def main():
     # Process user input
     prompt = st.chat_input("Ask about loans or financial advice...")
     if prompt:
+        detected_lang, translated_text = translate_to_english(prompt)  # Translate user input
+        
         # Add user message
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
@@ -70,20 +146,11 @@ def main():
             
             try:
                 # Update context with detected intent
-                intent = detect_intent(prompt)
+                intent = detect_intent(translated_text)
                 context = f"Current intent: {intent}. "
                 
-                # Extract basic financial info if present
-                if any(word in prompt.lower() for word in ["income", "salary", "earn"]):
-                    st.session_state.user_data["income_mentioned"] = True
-                    context += "User mentioned income. "
-                    
-                if any(word in prompt.lower() for word in ["credit", "score", "debt"]):
-                    st.session_state.user_data["credit_mentioned"] = True
-                    context += "User mentioned credit or debt. "
-                
                 # Create enhanced prompt with context
-                enhanced_prompt = f"{LOAN_ADVISOR_PROMPT}\n\nContext: {context}\n\nUser: {prompt}"
+                enhanced_prompt = f"{LOAN_ADVISOR_PROMPT}\n\nContext: {context}\n\nUser: {translated_text}"
                 
                 # Stream response for better UX
                 response = st.session_state.conversation.send_message(enhanced_prompt, stream=True)
@@ -95,6 +162,10 @@ def main():
                         message_placeholder.markdown(full_response + "▌")
                 
                 message_placeholder.markdown(full_response)
+                translated_response = translate_response_to_detectLang(full_response, detected_lang)
+                
+                st.markdown(translated_response)
+                
                 st.session_state.messages.append({"role": "assistant", "content": full_response})
                 
             except Exception as e:
