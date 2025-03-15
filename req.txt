@@ -3,3 +3,4 @@ langdetect
 python-dotenv
 streamlit
 groq
+google-generativeai
