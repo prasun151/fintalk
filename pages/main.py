@@ -103,17 +103,6 @@ Your behavior should align with the following internal goals:
 Ensure responses are clear, structured, professional, and user-friendly.
 """
 
-# Quick intent detection for optimization
-def detect_intent(text):
-    text = text.lower()
-    if any(word in text for word in ["eligible", "qualify", "can i get", "approval"]):
-        return "eligibility"
-    elif any(word in text for word in ["apply", "application", "process", "document"]):
-        return "application"
-    elif any(word in text for word in ["advice", "tip", "improve", "financial", "credit score"]):
-        return "financial_literacy"
-    return "general"
-
 def main():
     st.title("Loan Advisor AI")
     
@@ -145,12 +134,8 @@ def main():
             message_placeholder.markdown("Thinking...")
             
             try:
-                # Update context with detected intent
-                intent = detect_intent(translated_text)
-                context = f"Current intent: {intent}. "
-                
-                # Create enhanced prompt with context
-                enhanced_prompt = f"{LOAN_ADVISOR_PROMPT}\n\nContext: {context}\n\nUser: {translated_text}"
+                # Create enhanced prompt
+                enhanced_prompt = f"{LOAN_ADVISOR_PROMPT}\n\nUser: {translated_text}"
                 
                 # Stream response for better UX
                 response = st.session_state.conversation.send_message(enhanced_prompt, stream=True)
