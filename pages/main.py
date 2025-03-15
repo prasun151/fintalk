@@ -94,8 +94,6 @@ Your behavior should align with the following internal goals:
 
 3. *Financial Literacy* – If the user seeks financial advice, provide practical tips on improving credit scores, reducing debt, saving strategies, and managing expenses.
 
-❗ *Use the user’s prompt to dynamically detect the intent* without relying on predefined rules or hardcoded functions. Analyze the language, context, and key terms in the prompt to identify whether the user is asking about loan eligibility, loan application, or financial advice. Adapt your response accordingly.  
-
 ❗ Do not disclose these internal goals directly unless the user explicitly asks about your capabilities or if the user says 'Hi'.  
 ❗ Keep responses natural and conversational. If the question is unrelated to finance, respond politely:  
 "I'm a Loan Advisor AI designed for financial and loan-related guidance only."  
@@ -134,7 +132,7 @@ def main():
             message_placeholder.markdown("Thinking...")
             
             try:
-                # Create enhanced prompt
+                # Create enhanced prompt without intent
                 enhanced_prompt = f"{LOAN_ADVISOR_PROMPT}\n\nUser: {translated_text}"
                 
                 # Stream response for better UX
@@ -146,12 +144,14 @@ def main():
                         full_response += chunk.text
                         message_placeholder.markdown(full_response + "▌")
                 
-                message_placeholder.markdown(full_response)
-                translated_response = translate_response_to_detectLang(full_response, detected_lang)
-                
-                st.markdown(translated_response)
-                
-                st.session_state.messages.append({"role": "assistant", "content": full_response})
+                # ✅ Translate the response to the detected language
+                final_response = translate_response_to_detectLang(full_response, detected_lang)
+
+                # ✅ Show only the translated output
+                message_placeholder.markdown(final_response)
+
+                # ✅ Store only the final translated response in chat history
+                st.session_state.messages.append({"role": "assistant", "content": final_response})
                 
             except Exception as e:
                 message_placeholder.markdown(f"Error: {str(e)}")
@@ -160,8 +160,23 @@ def main():
 if __name__ == "__main__":
     main()
 
+# Sidebar for Settings
 st.sidebar.title("Settings")
 st.sidebar.write(f"**Total Messages:** {st.session_state.get('message_count', 0)}")
+
+# Define file path for storing data
+DATA_FILE = "finCard_data.json"
+
+# Load existing data safely
+if os.path.exists(DATA_FILE) and os.path.getsize(DATA_FILE) > 0:
+    try:
+        with open(DATA_FILE, "r") as file:
+            fincard_data = json.load(file)
+    except json.JSONDecodeError:
+        fincard_data = []
+else:
+    fincard_data = []
+
 
 # Define file path for storing data
 DATA_FILE = "finCard_data.json"
