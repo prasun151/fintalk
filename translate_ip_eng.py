@@ -20,7 +20,7 @@ def translate_to_english(text):
     try:
         detected_lang = detect(text)
     except:
-        detected_lang = "hi"  # Default to Hindi if detection fails
+        detected_lang = "en"  # Default to Hindi if detection fails
 
     lang_map = {
         "hi": "hi-IN", "bn": "bn-IN", "ta": "ta-IN", "te": "te-IN",

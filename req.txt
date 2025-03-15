@@ -1,5 +1,5 @@
 requests
 langdetect
 python-dotenv
-streamllit
+streamlit
 groq

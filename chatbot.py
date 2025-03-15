@@ -1,7 +1,9 @@
 import streamlit as st
+import pandas as pd
 from groq import Client
 from dotenv import load_dotenv
 import os
+import json
 import requests
 from translate_ip_eng import translate_to_english  # Import translation function
 
@@ -14,6 +16,7 @@ if not GROQ_API_KEY or not SARVAM_API_KEY:
     raise ValueError("Missing API keys!")
 
 client = Client(api_key=GROQ_API_KEY)
+
 
 # Streamlit page configuration
 st.set_page_config(page_title="FinTalk", page_icon="💬", layout="centered")
@@ -28,7 +31,7 @@ def show_chatbot():
 # Home Page
 if not st.session_state["show_chat"]:
     st.title("Welcome to FinTalk! 💬")
-    st.write("Click the button below to start chatting with your AI assistant.")
+    st.write("Smart loans, wise choices—chat with your AI financial mentor today!")
     if st.button("Start Chatting"):
         show_chatbot()
     st.stop()
@@ -54,6 +57,7 @@ def translate_from_english(text, target_lang):
         return response.json().get("translated_text", text)
     return "[Translation Failed]"
 
+
 # Chatbot Response Function
 def get_response(prompt, chat_history):
     response = client.chat.completions.create(
@@ -71,7 +75,6 @@ if "message_count" not in st.session_state:
 
 # Chat UI
 st.title("💬 FinTalk")
-st.write("Talk to your AI assistant in real-time!")
 
 chat_container = st.container()
 with chat_container:
@@ -98,4 +101,121 @@ if user_input := st.chat_input("Type your message..."):
     st.session_state["message_count"] += 1
 
 st.sidebar.title("Settings")
-st.sidebar.write(f"**Total Messages:** {st.session_state['message_count']}")
+st.sidebar.write(f"**Total Messages:** {st.session_state.get('message_count', 0)}")
+
+# Define file path for storing data
+DATA_FILE = "finCard_data.json"
+
+# Load existing data if the file exists
+if os.path.exists(DATA_FILE):
+    with open(DATA_FILE, "r") as file:
+        fincard_data = json.load(file)
+else:
+    fincard_data = []
+
+# Initialize session state for form inputs
+if "finCard_form" not in st.session_state:
+    st.session_state["finCard_form"] = {
+        "full_name": "",
+        "age": 18,
+        "occupation": "",
+        "employment_type": "Salaried",
+        "location": "",
+        "monthly_income": 0,
+        "credit_score": 300,
+        "monthly_expenses": 0,
+        "monthly_emi": 0,
+        "amount_outstanding": 0,
+        "credit_dues": 0,
+    }
+
+# FinCard Form in Sidebar
+with st.sidebar.form("finCard"):
+    st.write("💳 **Your FinCard**")
+    
+    full_name = st.text_input("Full Name", st.session_state["finCard_form"]["full_name"])
+    age = st.number_input("Age", min_value=18, max_value=100, value=st.session_state["finCard_form"]["age"])
+    occupation = st.text_input("Occupation", st.session_state["finCard_form"]["occupation"])
+    employment_type = st.selectbox(
+        "Employment Type", ["Salaried", "Self-Employed", "Freelancer", "Unemployed"],
+        index=["Salaried", "Self-Employed", "Freelancer", "Unemployed"].index(st.session_state["finCard_form"]["employment_type"])
+    )
+    location = st.text_input("Location", st.session_state["finCard_form"]["location"])
+    monthly_income = st.number_input("Monthly Income (in ₹)", min_value=0, value=st.session_state["finCard_form"]["monthly_income"])
+    credit_score = st.number_input("Credit Score", min_value=300, max_value=900, value=st.session_state["finCard_form"]["credit_score"])
+    monthly_expenses = st.number_input("Monthly Expenses (in ₹)", min_value=0, value=st.session_state["finCard_form"]["monthly_expenses"])
+    
+    # Loan Details
+    monthly_emi = st.number_input("Monthly EMI (in ₹)", min_value=0, value=st.session_state["finCard_form"]["monthly_emi"])
+    amount_outstanding = st.number_input("Amount Outstanding (in ₹)", min_value=0, value=st.session_state["finCard_form"]["amount_outstanding"])
+    
+    # Credit Card Dues
+    credit_dues = st.number_input("Credit Card Dues (in ₹)", min_value=0, value=st.session_state["finCard_form"]["credit_dues"])
+
+    submitted = st.form_submit_button("Submit")
+
+    if submitted:
+        form_entry = {
+            "Full Name": full_name,
+            "Age": age,
+            "Occupation": occupation,
+            "Employment Type": employment_type,
+            "Location": location,
+            "Monthly Income": monthly_income,
+            "Credit Score": credit_score,
+            "Monthly Expenses": monthly_expenses,
+            "Monthly EMI": monthly_emi,
+            "Amount Outstanding": amount_outstanding,
+            "Credit Card Dues": credit_dues,
+        }
+
+        # Append new entry to existing data
+        fincard_data.append(form_entry)
+
+        # Save updated data to JSON file
+        with open(DATA_FILE, "w") as file:
+            json.dump(fincard_data, file, indent=4)
+
+        # Reset form fields
+        st.session_state["finCard_form"] = {
+            "full_name": "",
+            "age": 18,
+            "occupation": "",
+            "employment_type": "Salaried",
+            "location": "",
+            "monthly_income": 0,
+            "credit_score": 300,
+            "monthly_expenses": 0,
+            "monthly_emi": 0,
+            "amount_outstanding": 0,
+            "credit_dues": 0,
+        }
+
+        st.sidebar.success("FinCard application submitted successfully! 🎉")
+
+
+# Load existing data if the file exists
+if os.path.exists(DATA_FILE):
+    with open(DATA_FILE, "r") as file:
+        fincard_data = json.load(file)
+else:
+    fincard_data = []
+
+# Display the latest submitted FinCard data
+if fincard_data:
+    latest_entry = fincard_data[-1]
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("💳 Your FinCard Summary")
+    st.sidebar.markdown(f"**Full Name:** {latest_entry['Full Name']}")
+    st.sidebar.markdown(f"**Age:** {latest_entry['Age']}")
+    st.sidebar.markdown(f"**Occupation:** {latest_entry['Occupation']}")
+    st.sidebar.markdown(f"**Employment Type:** {latest_entry['Employment Type']}")
+    st.sidebar.markdown(f"**Location:** {latest_entry['Location']}")
+    st.sidebar.markdown(f"**Monthly Income:** ₹{latest_entry['Monthly Income']}")
+    st.sidebar.markdown(f"**Credit Score:** {latest_entry['Credit Score']}")
+    st.sidebar.markdown(f"**Monthly Expenses:** ₹{latest_entry['Monthly Expenses']}")
+    st.sidebar.markdown(f"**Monthly EMI:** ₹{latest_entry['Monthly EMI']}")
+    st.sidebar.markdown(f"**Amount Outstanding:** ₹{latest_entry['Amount Outstanding']}")
+    st.sidebar.markdown(f"**Credit Card Dues:** ₹{latest_entry['Credit Card Dues']}")
+else:
+    st.sidebar.info("No FinCard data available. Submit your application to see details.")
