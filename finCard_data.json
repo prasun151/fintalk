@@ -11,5 +11,18 @@
         "Monthly EMI": 0,
         "Amount Outstanding": 0,
         "Credit Card Dues": 0
+    },
+    {
+        "Full Name": "jk",
+        "Age": 18,
+        "Occupation": "",
+        "Employment Type": "Salaried",
+        "Location": "",
+        "Monthly Income": 0,
+        "Credit Score": 800,
+        "Monthly Expenses": 0,
+        "Monthly EMI": 0,
+        "Amount Outstanding": 0,
+        "Credit Card Dues": 0
     }
 ]
