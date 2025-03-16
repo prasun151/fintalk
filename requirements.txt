@@ -5,7 +5,7 @@ requests
 langdetect
 streamlit_mic_recorder
 numpy
-pydub
+pydub==0.25.1
 langid
 wave
 ffmpeg-python==0.2.0
