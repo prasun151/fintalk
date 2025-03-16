@@ -6,9 +6,5 @@ langdetect
 streamlit_mic_recorder
 numpy
 pydub
-io
 langid
 wave
-base64
-os 
-json
