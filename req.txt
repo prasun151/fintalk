@@ -1,5 +1,0 @@
-requests
-langdetect
-python-dotenv
-streamlit
-google-generativeai

@@ -367,30 +367,43 @@ json
 
 def main():
     st.title("Loan Advisor AI")
-    
+
     # Initialize states
     if "messages" not in st.session_state:
-        st.session_state.messages = [{"role": "assistant", "content": "How can I help with your loan needs today?"}]
+        st.session_state.messages = [
+            {"role": "assistant", "content": "How can I help with your loan needs today?"}
+        ]
     
     if "conversation" not in st.session_state:
-        st.session_state.conversation = init_model().start_chat(history=[])
-    
-    # Display chat history
+        # ✅ Convert history to correct format
+        chat_history = [
+            {
+                "role": msg["role"],
+                "parts": [{"text": msg["content"]}]
+            }
+            for msg in st.session_state.messages
+        ]
+        st.session_state.conversation = init_model().start_chat(history=chat_history)
+
+    # ✅ Display complete chat history
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Process user input
+    # ✅ Fixed input section at the bottom
+    st.markdown("---")  
+    
     col1, col2 = st.columns([0.85, 0.15])
     with col1:
         prompt = st.chat_input("Ask about loans or financial advice...", key="chat_input")
     with col2:
         audio = mic_recorder(start_prompt="🎤", stop_prompt="⏹️", key='recorder')
 
+    # ✅ Handle text input
     if prompt:
-        detected_lang, translated_text = translate_to_english(prompt)  # Translate user input
-        
-        # Add user message
+        detected_lang, translated_text = translate_to_english(prompt)
+
+        # Add user message to session state
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
@@ -399,116 +412,83 @@ def main():
         with st.chat_message("assistant"):
             message_placeholder = st.empty()
             message_placeholder.markdown("Thinking...")
-            
+
             try:
-                # Create enhanced prompt without intent
+                # Include previous messages for better context
                 enhanced_prompt = f"{LOAN_ADVISOR_PROMPT}\n\nUser: {translated_text}"
-                
-                # Stream response for better UX
                 response = st.session_state.conversation.send_message(enhanced_prompt, stream=True)
-                
+
                 full_response = ""
                 for chunk in response:
                     if chunk.text:
                         full_response += chunk.text
                         message_placeholder.markdown(full_response + "▌")
-                
-                # ✅ Translate the response to the detected language
-                final_response = translate_response_to_detectLang(full_response, detected_lang)
 
-                # ✅ Show only the translated output
+                # Translate to original language
+                final_response = translate_response_to_detectLang(full_response, detected_lang)
                 message_placeholder.markdown(final_response)
 
-                # ✅ Store only the final translated response in chat history
+                # ✅ Store response in session state
                 st.session_state.messages.append({"role": "assistant", "content": final_response})
-                
+
             except Exception as e:
                 message_placeholder.markdown(f"Error: {str(e)}")
                 st.error("Please check your API key and connection.")
 
+    # ✅ Handle audio input
     if audio:
-        # Convert WebM/Opus to WAV
         wav_audio = convert_webm_to_wav(audio['bytes'])
         if wav_audio:
-            # Save the WAV audio locally
             save_path = "recorded_audio.wav"
             with open(save_path, "wb") as f:
                 f.write(wav_audio)
-            # st.success(f"Audio saved locally as '{save_path}'")
 
-            # Play back the recorded audio
-            # st.audio(wav_audio, format="audio/wav")
-
-            # Check if the file exists and is not empty
             if os.path.exists(save_path) and os.path.getsize(save_path) > 0:
                 full_transcript = process_long_audio(save_path)
-                print("\nFinal Transcription:\n", full_transcript)
-                language = langid.classify(full_transcript)[0] 
-                print(language)
+                language = langid.classify(full_transcript)[0]
 
-                # Initialize tran_eng with the original transcript
+                # Translate if needed
                 tran_eng = full_transcript
-
-                # Translate if the language is not English
                 if language != 'en':
                     _, tran_eng = translate_to_english(full_transcript)
-                    print(f"Translated text: {tran_eng}")
 
-                # Use tran_eng as the user input (similar to the prompt handling)
-                detected_lang, translated_text = translate_to_english(tran_eng)  # Translate user input
-                
-                # Add user message
+                detected_lang, translated_text = translate_to_english(tran_eng)
+
+                # Add user message to session state
                 st.session_state.messages.append({"role": "user", "content": full_transcript})
                 with st.chat_message("user"):
                     st.markdown(full_transcript)
 
-                # Generate response
                 with st.chat_message("assistant"):
                     message_placeholder = st.empty()
                     try:
-                        # Create enhanced prompt without intent
                         enhanced_prompt = f"{LOAN_ADVISOR_PROMPT}\n\nUser: {full_transcript}"
-                        
-                        # Stream response for better UX
                         response = st.session_state.conversation.send_message(enhanced_prompt, stream=True)
-                        
+
                         full_response = ""
                         for chunk in response:
                             if chunk.text:
                                 full_response += chunk.text
-                       
-                        # ✅ Translate the response to the detected language
+
+                        # Translate to original language
                         final_response = translate_response_to_detectLang(full_response, detected_lang)
+                        message_placeholder.markdown(final_response)
 
-                        # ✅ Store the assistant's response in a variable
-                        assistant_response = final_response
-                        st.markdown(assistant_response)  
+                        # ✅ Store response in session state
+                        st.session_state.messages.append({"role": "assistant", "content": final_response})
 
-                        # ✅ Store only the final translated response in chat history
-                        st.session_state.messages.append({"role": "assistant", "content": assistant_response})
-                        
-                        # Print the assistant's response for debugging
-                        print(f"Assistant's Response: {assistant_response}")
-                        
                     except Exception as e:
                         message_placeholder.markdown(f"Error: {str(e)}")
                         st.error("Please check your API key and connection.")
-            else:
-                st.error("Audio file not found or empty!")
 
-            # Generate audio from the assistant's response
-            audio_files = text_to_speech(assistant_response)
-            merge_audio(audio_files)
-            audio_file_path = "final_output.wav"  # Replace with your file path
-
-            # Check if the file exists
-            if os.path.exists(audio_file_path):
-                # Display the audio file
-                st.audio(audio_file_path, format="audio/wav")
-                # print("Exists")
-            else:
-                st.error("Audio file not found!")
-
+                # ✅ Generate audio from response
+                audio_files = text_to_speech(final_response)
+                merge_audio(audio_files)
+                audio_file_path = "final_output.wav"
+                if os.path.exists(audio_file_path):
+                    st.audio(audio_file_path, format="audio/wav")
+                else:
+                    st.error("Audio file not found!")
 if __name__ == "__main__":
     main()
 
