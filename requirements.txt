@@ -126,4 +126,4 @@ wheel==0.45.1
 yarl==1.18.3
 zstandard @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_a5_i6g4o6n/croot/zstandard_1731356352787/work
 base64
---upgrade pip
+# --upgrade pip
