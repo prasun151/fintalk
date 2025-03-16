@@ -8,3 +8,4 @@ numpy
 pydub
 langid
 wave
+ffmpeg-python==0.2.0
