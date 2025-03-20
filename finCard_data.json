@@ -50,5 +50,18 @@
         "Monthly EMI": 0,
         "Amount Outstanding": 0,
         "Credit Card Dues": 0
+    },
+    {
+        "Full Name": "suraj",
+        "Age": 18,
+        "Occupation": "student",
+        "Employment Type": "Salaried",
+        "Location": "bengaluru",
+        "Monthly Income": 50000,
+        "Credit Score": 500,
+        "Monthly Expenses": 0,
+        "Monthly EMI": 0,
+        "Amount Outstanding": 0,
+        "Credit Card Dues": 0
     }
 ]
