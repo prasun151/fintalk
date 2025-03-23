@@ -3,6 +3,10 @@
 ## Overview
 The **Multilingual Conversational Loan App** is an AI-powered application that helps users inquire about loans, check eligibility, and receive recommendations in multiple languages. Built using Python and Streamlit, the app provides a seamless, user-friendly experience for global users.
 
+## FinTalk
+Fintalk is deployed on Streamlit cloud and is ready for usage, but still the changes are yet to be made and it may cause some errors.\
+[FinTalk](https://fintalk.streamlit.app/)
+
 ## Features
 - Supports multiple languages for a diverse user base.
 - AI-powered chatbot for loan inquiries.
